@@ -1,0 +1,178 @@
+#!/bin/bash
+
+NAME="SteamDeck Cache Cleaner"
+VERSION=0.0.1
+
+STEAM="$HOME/.steam/steam"
+SHORTCUTS=$STEAM"/userdata/??*/config/shortcuts.vdf"
+STEAMAPPS=$STEAM"/steamapps"
+IDDB=$STEAMAPPS"/iddb"
+CLEANINFO="/tmp/cleanInfo"
+
+MEDIA=("/run/media")
+CLEAN=("compatdata shadercache")
+
+function find_paths()
+{
+    PATHS+=($(readlink $STEAMAPPS))
+
+    for media in $MEDIA;
+    do
+        for dir in $media/*;
+        do
+            if [[ -d "$dir/steamapps" ]]; then
+                PATHS+=($(readlink $dir/steamapps))
+            fi
+        done
+    done
+}
+
+function map_shortcuts()
+{
+    # https://developer.valvesoftware.com/wiki/Add_Non-Steam_Game
+
+    id_offset=6
+    name_offset=19
+
+    positions=$(strings -t d $SHORTCUTS \
+        | grep appid                    \
+        | grep -oE '[0-9]+')
+    for p in $positions;
+    do
+        id=$(od -An -l -j $((p+$id_offset)) -N 4 $SHORTCUTS);
+        name=$(strings -t d $SHORTCUTS    \
+            | grep -w $((p+$name_offset)) \
+            | sed -e 's/^ *[0-9]* //g');
+        echo -e $name"\t"${id// /} >> $IDDB
+    done
+}
+
+function map_manifests()
+{
+    for file in $1/appmanifest_*.acf;
+    do
+        awk '{
+            if($1 == "\"appid\"") {
+                $1="";
+                id=gensub(/ *" */, "", "g", $0);
+            }
+
+            if($1 == "\"name\"") {
+                $1="";
+                name=gensub(/ *" */, "", "g", $0);
+            }
+        }
+
+        END {
+            print name "\t" id;
+        }' $file >> $IDDB
+    done
+}
+
+function map_ids()
+{
+    map_shortcuts
+
+    for path in $PATHS;
+    do
+        map_manifests $path
+    done
+
+    sort -u $IDDB -o $IDDB
+}
+
+function prepare_info()
+{
+    rm -f $CLEANINFO
+
+    reg_exp="^[0-9]+$"
+
+    for path in $PATHS;
+    do
+        for clean in $CLEAN;
+        do
+            for i in $path/$clean/*; do
+                id=$(basename $i)
+                if [[ $id =~ $reg_exp ]]; then
+                    name=$(grep $id $IDDB | cut -f 1)
+                    size=$(du -h -d 0 $i | cut -f 1)
+                    type=${clean::6}
+
+                    if [[ -z $name ]]; then name="Unknown"; fi
+
+                    echo -e "1 \t $name \t $id \t $size \t $type \t $i" >> $CLEANINFO
+                fi
+            done
+        done
+    done
+
+    IFS=$'[\t|\n]';
+    INFO=$(sort $CLEANINFO)
+    unset IFS;
+
+    rm -f $CLEANINFO
+}
+
+function show_info()
+{
+    IFS=$'[\t|\n]';
+    REMOVE=($(zenity \
+        --title "$NAME $VERSION" \
+        --width=1000 \
+        --height=720 \
+        --list \
+        --checklist \
+        --column="*" \
+        --column="Name" \
+        --column="Id" \
+        --column="Size" \
+        --column="Type" \
+        --column="Path" \
+        --separator="" \
+        --print-column=6 \
+        ${INFO[@]}))
+
+    res=$?
+
+    unset IFS;
+
+    return $res
+}
+
+function show_confirm()
+{
+    list=${REMOVE[@]//" "/"\n"}
+
+    zenity \
+        --title "$NAME $VERSION" \
+        --width=550 \
+        --height=400 \
+        --question \
+        --text="Remove this folders?\n$list"
+
+    res=$?
+
+    return $res
+}
+
+declare -a PATHS
+find_paths
+
+map_ids
+
+INFO=()
+prepare_info
+
+REMOVE=()
+show_info
+
+if [[ $? == 0 ]]; then
+    show_confirm
+
+    if [[ $? == 0 ]]; then
+        for path in $REMOVE;
+        do
+            rm -r $path
+        done
+    fi
+fi
