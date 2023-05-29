@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME="SteamDeck Cache Cleaner"
-VERSION=0.0.1
+VERSION=0.0.2
 
 STEAM="$HOME/.steam/steam"
 SHORTCUTS=$STEAM"/userdata/??*/config/shortcuts.vdf"
@@ -14,21 +14,25 @@ CLEAN=("compatdata shadercache")
 
 function find_paths()
 {
-    PATHS+=($(readlink $STEAMAPPS))
+    PATHS+=($(readlink -f $STEAMAPPS))
 
     for media in $MEDIA;
     do
         for dir in $media/*;
         do
             if [[ -d "$dir/steamapps" ]]; then
-                PATHS+=($(readlink $dir/steamapps))
+                PATHS+=($(readlink -f $dir/steamapps))
             fi
         done
     done
+
+    echo "PATHS=("${PATHS[*]}")"
 }
 
 function map_shortcuts()
 {
+    echo "Map shortcuts:"
+
     # https://developer.valvesoftware.com/wiki/Add_Non-Steam_Game
 
     id_offset=6
@@ -43,12 +47,14 @@ function map_shortcuts()
         name=$(strings -t d $SHORTCUTS    \
             | grep -w $((p+$name_offset)) \
             | sed -e 's/^ *[0-9]* //g');
-        echo -e $name"\t"${id// /} >> $IDDB
+        echo -e $name"\t"${id// /} | tee -a $IDDB
     done
 }
 
 function map_manifests()
 {
+    echo "Map manifests:"
+
     for file in $1/appmanifest_*.acf;
     do
         awk '{
@@ -65,7 +71,7 @@ function map_manifests()
 
         END {
             print name "\t" id;
-        }' $file >> $IDDB
+        }' $file | tee -a $IDDB
     done
 }
 
