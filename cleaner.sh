@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME="SteamDeck Cache Cleaner"
-VERSION=0.0.2
+VERSION=0.0.3
 
 STEAM="$HOME/.steam/steam"
 SHORTCUTS=$STEAM"/userdata/??*/config/shortcuts.vdf"
@@ -47,6 +47,7 @@ function map_shortcuts()
         name=$(strings -t d $SHORTCUTS    \
             | grep -w $((p+$name_offset)) \
             | sed -e 's/^ *[0-9]* //g');
+        sed -i "/${id// /}/d" $IDDB
         echo -e $name"\t"${id// /} | tee -a $IDDB
     done
 }
