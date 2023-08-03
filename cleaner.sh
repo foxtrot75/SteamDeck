@@ -1,26 +1,26 @@
 #!/bin/bash
 
 NAME="SteamDeck Cache Cleaner"
-VERSION=0.0.3
+VERSION="0.0.4"
 
-STEAM="$HOME/.steam/steam"
-SHORTCUTS=$STEAM"/userdata/??*/config/shortcuts.vdf"
-STEAMAPPS=$STEAM"/steamapps"
-IDDB=$STEAMAPPS"/iddb"
-CLEANINFO="/tmp/cleanInfo"
-
+WORKPATH=$(readlink -f $(dirname $0))
 MEDIA=("/run/media")
+
+STEAM=$HOME"/.steam/steam"
+IDDB=$WORKPATH"/iddb"
+SHORTCUTS=$STEAM"/userdata/??*/config/shortcuts.vdf"
 CLEAN=("compatdata shadercache")
 
 function find_paths()
 {
-    PATHS+=($(readlink -f $STEAMAPPS))
+    PATHS+=($(readlink -f $STEAM"/steamapps"))
 
-    for media in $MEDIA;
+    for media in $MEDIA
     do
-        for dir in $media/*;
+        for dir in $media/*
         do
-            if [[ -d "$dir/steamapps" ]]; then
+            if [[ -d "$dir/steamapps" ]]
+            then
                 PATHS+=($(readlink -f $dir/steamapps))
             fi
         done
@@ -43,12 +43,13 @@ function map_shortcuts()
         | grep -oE '[0-9]+')
     for p in $positions;
     do
-        id=$(od -An -l -j $((p+$id_offset)) -N 4 $SHORTCUTS);
-        name=$(strings -t d $SHORTCUTS    \
-            | grep -w $((p+$name_offset)) \
-            | sed -e 's/^ *[0-9]* //g');
-        sed -i "/${id// /}/d" $IDDB
-        echo -e $name"\t"${id// /} | tee -a $IDDB
+        id=$(od -A n -l -j $(($p+$id_offset)) -N 4 $SHORTCUTS \
+            | sed -e 's/^ *//g')
+        name=$(strings -t d $SHORTCUTS     \
+            | grep -w $(($p+$name_offset)) \
+            | sed -e 's/^[ 0-9]* //g')
+        sed -i "/$id/d" $IDDB
+        echo -e "$name\t$id" | tee -a $IDDB
     done
 }
 
@@ -71,7 +72,7 @@ function map_manifests()
         }
 
         END {
-            print name "\t" id;
+            print name"\t"id;
         }' $file | tee -a $IDDB
     done
 }
@@ -90,58 +91,60 @@ function map_ids()
 
 function prepare_info()
 {
-    rm -f $CLEANINFO
-
     reg_exp="^[0-9]+$"
 
     for path in $PATHS;
     do
         for clean in $CLEAN;
         do
-            for i in $path/$clean/*; do
+            for i in $path/$clean/*
+            do
                 id=$(basename $i)
-                if [[ $id =~ $reg_exp ]]; then
+                if [[ $id =~ $reg_exp ]]
+                then
                     name=$(grep $id $IDDB | cut -f 1)
                     size=$(du -h -d 0 $i | cut -f 1)
                     type=${clean::6}
 
-                    if [[ -z $name ]]; then name="Unknown"; fi
+                    if [[ -z $name ]]
+                    then
+                        name="Unknown"
+                    fi
 
-                    echo -e "1 \t $name \t $id \t $size \t $type \t $i" >> $CLEANINFO
+                    INFO+=("1\t$name\t$id\t$size\t$type\t$i\n")
                 fi
             done
         done
     done
 
-    IFS=$'[\t|\n]';
-    INFO=$(sort $CLEANINFO)
-    unset IFS;
-
-    rm -f $CLEANINFO
+    IFS=$'\n'
+    INFO=($(sort <<< "${INFO[*]}"))
+    INFO=($(echo -e ${INFO[*]}))
+    unset IFS
 }
 
 function show_info()
 {
-    IFS=$'[\t|\n]';
+    IFS=$'[\t|\n]'
     REMOVE=($(zenity \
         --title "$NAME $VERSION" \
-        --width=1000 \
-        --height=720 \
-        --list \
-        --checklist \
-        --column="*" \
-        --column="Name" \
-        --column="Id" \
-        --column="Size" \
-        --column="Type" \
-        --column="Path" \
-        --separator="" \
+        --width=1000     \
+        --height=720     \
+        --list           \
+        --checklist      \
+        --column="*"     \
+        --column="Name"  \
+        --column="Id"    \
+        --column="Size"  \
+        --column="Type"  \
+        --column="Path"  \
+        --separator=""   \
         --print-column=6 \
         ${INFO[@]}))
 
     res=$?
 
-    unset IFS;
+    unset IFS
 
     return $res
 }
@@ -152,9 +155,9 @@ function show_confirm()
 
     zenity \
         --title "$NAME $VERSION" \
-        --width=550 \
+        --width=550  \
         --height=400 \
-        --question \
+        --question   \
         --text="Remove this folders?\n$list"
 
     res=$?
@@ -162,9 +165,8 @@ function show_confirm()
     return $res
 }
 
-declare -a PATHS
+declare -a PATHS=()
 find_paths
-
 map_ids
 
 INFO=()
@@ -172,12 +174,12 @@ prepare_info
 
 REMOVE=()
 show_info
-
-if [[ $? == 0 ]]; then
+if [[ $? == 0 && ${#REMOVE[@]} != 0 ]]
+then
     show_confirm
-
-    if [[ $? == 0 ]]; then
-        for path in $REMOVE;
+    if [[ $? == 0 ]]
+    then
+        for path in $REMOVE
         do
             rm -r $path
         done
