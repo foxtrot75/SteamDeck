@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME="SteamDeck Cache Cleaner"
-VERSION="0.0.4"
+VERSION="1.0.0"
 
 WORKPATH=$(readlink -f $(dirname $0))
 MEDIA=("/run/media")
