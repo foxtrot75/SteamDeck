@@ -1,7 +1,7 @@
 # SteamDeck
 
 ## cleaner.sh
-SteamDeck Cache Cleaner script
+`SteamDeck Cache Cleaner` script
 
 After running script create map of installed apps and save in to local db.
 Then it find folders with steamapps and show cache available to remove.
@@ -11,3 +11,12 @@ Then it find folders with steamapps and show cache available to remove.
 Select which folders you want delete. After than confirm you choise.
 
 ![Confirm](./images/confirm.png)
+
+## Install
+
+You can download `cleaner.sh` from browser and start from explorer or use terminal
+```
+wget https://github.com/foxtrot75/SteamDeck/releases/download/1.0.0/cleaner.sh
+chmod +x cleaner.sh
+./cleaner.sh
+```
