@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME="SteamDeck Cache Cleaner"
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 WORKPATH=$(readlink -f $(dirname $0))
 MEDIA=("/run/media")
@@ -138,7 +138,7 @@ function show_info()
         --column="Size"  \
         --column="Type"  \
         --column="Path"  \
-        --separator=""   \
+        --separator=" "  \
         --print-column=6 \
         ${INFO[@]}))
 
