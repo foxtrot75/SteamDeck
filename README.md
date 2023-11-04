@@ -16,7 +16,7 @@ Select which folders you want delete. After than confirm you choise.
 
 You can download `cleaner.sh` from browser and start from explorer or use terminal
 ```
-wget https://github.com/foxtrot75/SteamDeck/releases/download/1.0.0/cleaner.sh
+wget https://github.com/foxtrot75/SteamDeck/releases/download/v1.0.1/cleaner.sh
 chmod +x cleaner.sh
 ./cleaner.sh
 ```
