@@ -1,4 +1,4 @@
-# SteamDeck
+# Steam Deck
 
 ## cleaner.sh
 `SteamDeck Cache Cleaner` script
