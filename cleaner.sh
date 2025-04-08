@@ -7,7 +7,7 @@ SCRIPT_PATH="$(dirname $SCRIPT_FULL)"
 SCRIPT_NAME="$(basename $SCRIPT_FULL)"
 
 NAME="SteamDeck Cache Cleaner"
-VERSION="1.0.2"
+VERSION="1.0.3"
 
 IDDB="$SCRIPT_PATH/iddb"
 STEAM="$HOME/.steam/steam"
@@ -157,6 +157,8 @@ function show_confirm()
 
     return $res
 }
+
+touch $IDDB
 
 declare -a PATHS=()
 find_paths
